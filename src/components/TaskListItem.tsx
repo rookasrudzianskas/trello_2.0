@@ -41,7 +41,6 @@ export default function TaskListItem({
         marginTop.value = withTiming(ItemHeight);
       }
 
-      // if it's on top of the current item
       // TODO: keep track of the currently dragging item, and offset the comparison, becuase it is deleted form the lists
       marginTop.value = withTiming(
         newDragY >= itemY && newDragY < itemY + ItemHeight ? ItemHeight : 0
