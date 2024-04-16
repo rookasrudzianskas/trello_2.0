@@ -1,18 +1,24 @@
-// @ts-nocheck
 import { View, StyleSheet, useWindowDimensions } from 'react-native';
 import DraggingTask from './DraggingTask';
 import { BSON } from 'realm';
 
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { runOnJS, useSharedValue } from 'react-native-reanimated';
+import Animated, {
+  SharedValue,
+  runOnJS,
+  useSharedValue,
+} from 'react-native-reanimated';
 import { PropsWithChildren, createContext, useContext, useState } from 'react';
 
 type DraggingContext = {
+  draggingTaskId: BSON.ObjectID;
   setDraggingTask: (id: BSON.ObjectID, y: number) => void;
+  dragY?: SharedValue<number>;
 };
 
 const DraggingContext = createContext<DraggingContext>({
   setDraggingTask: () => {},
+  draggingTaskId: null,
 });
 
 const TaskDragArea = ({ children }: PropsWithChildren) => {
@@ -24,6 +30,10 @@ const TaskDragArea = ({ children }: PropsWithChildren) => {
   const dragY = useSharedValue(0);
 
   const pan = Gesture.Pan()
+    .manualActivation(true)
+    .onTouchesMove((event, stateManager) => {
+      stateManager.activate();
+    })
     .onChange((event) => {
       dragX.value = dragX.value + event.changeX;
       dragY.value = dragY.value + event.changeY;
@@ -40,35 +50,38 @@ const TaskDragArea = ({ children }: PropsWithChildren) => {
   };
 
   return (
-    <DraggingContext.Provider value={{ setDraggingTask }}>
-      {children}
+    <DraggingContext.Provider
+      value={{
+        setDraggingTask,
+        dragY: draggingTaskId ? dragY : undefined,
+        draggingTaskId,
+      }}
+    >
       <GestureDetector gesture={pan}>
-        {draggingTaskId ? (
-          <View
+        <View
+          style={{
+            // @ts-ignore
+            ...StyleSheet.absoluteFill,
+          }}
+        >
+          {children}
+
+          <Animated.View
             style={{
-              ...StyleSheet.absoluteFill,
-              backgroundColor: 'rgba(100,100,100, 0.8)',
+              width: width - 40,
+              position: 'absolute',
+              top: dragY,
+              left: dragX,
+              transform: [
+                {
+                  rotateZ: '3deg',
+                },
+              ],
             }}
           >
-            <Animated.View
-              style={{
-                width: width - 40,
-                position: 'absolute',
-                top: dragY,
-                left: dragX,
-                transform: [
-                  {
-                    rotateZ: '3deg',
-                  },
-                ],
-              }}
-            >
-              <DraggingTask id={draggingTaskId} />
-            </Animated.View>
-          </View>
-        ) : (
-          <View />
-        )}
+            {draggingTaskId && <DraggingTask id={draggingTaskId} />}
+          </Animated.View>
+        </View>
       </GestureDetector>
     </DraggingContext.Provider>
   );
