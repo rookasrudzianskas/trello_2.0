@@ -10,6 +10,7 @@ import TaskListItem from './TaskListItem';
 import { useState } from 'react';
 import { useRealm, useQuery, useUser } from '@realm/react';
 import { Task } from '../models/Task';
+import { useDraggingContext } from './TaskDragArea';
 
 export default function TaskList() {
   const realm = useRealm();
@@ -17,14 +18,18 @@ export default function TaskList() {
   const user = useUser();
 
   const maxPosition = (useQuery(Task).max('position') as number) || 0;
+
   const [newTask, setNewTask] = useState('');
 
+  const { dragOffsetY } = useDraggingContext();
+
   const createTask = () => {
-    // @ts-ignore
-    realm.create(Task, {
-      description: newTask,
-      user_id: user.id,
-      position: maxPosition + 1,
+    realm.write(() => {
+      realm.create(Task, {
+        description: newTask,
+        user_id: user.id,
+        position: maxPosition + 1,
+      });
     });
 
     setNewTask('');
@@ -36,9 +41,11 @@ export default function TaskList() {
 
       {/* The list of tasks */}
       <FlatList
+        onScroll={(event) =>
+          (dragOffsetY.value = event.nativeEvent.contentOffset.y)
+        }
         data={tasks}
         renderItem={({ item, index }) => (
-          // @ts-ignore
           <TaskListItem task={item} index={index} />
         )}
         // CellRendererComponent={({ children, index }) => (
@@ -67,6 +74,7 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 5,
     gap: 5,
+    flex: 1,
   },
   title: {
     color: 'white',
